@@ -247,7 +247,7 @@ func (d NetworkDriver) CreateEndpoint(request *network.CreateEndpointRequest) (*
 	endpoint.Metadata.Orchestrator = d.orchestratorID
 	endpoint.Metadata.Workload = d.containerName
 	endpoint.Metadata.Name = request.EndpointID
-	endpoint.Spec.InterfaceName = "cali" + request.EndpointID[:mathutils.MinInt(11, len(request.EndpointID))]
+	endpoint.Spec.InterfaceName = d.ifPrefix + request.EndpointID[:mathutils.MinInt(11, len(request.EndpointID))]
 	userProvidedMac := (request.Interface.MacAddress != "")
 	var mac net.HardwareAddr
 	if userProvidedMac {
@@ -370,11 +370,11 @@ func (d NetworkDriver) Join(request *network.JoinRequest) (*network.JoinResponse
 	logutils.JSONMessage("Join", request)
 
 	// 1) Set up a veth pair
-	// 	The one end will stay in the host network namespace - named caliXXXXX
+	// 	The one end will stay in the host network namespace - named with NetworkDriver's ifPrefix
 	//	The other end is given a temporary name. It's moved into the final network namespace by libnetwork itself.
 	var err error
 	prefix := request.EndpointID[:mathutils.MinInt(11, len(request.EndpointID))]
-	hostInterfaceName := "cali" + prefix
+	hostInterfaceName := d.ifPrefix + prefix
 	tempInterfaceName := "temp" + prefix
 
 	if err = netns.CreateVeth(hostInterfaceName, tempInterfaceName); err != nil {
@@ -424,8 +424,8 @@ func (d NetworkDriver) Join(request *network.JoinRequest) (*network.JoinResponse
 
 func (d NetworkDriver) Leave(request *network.LeaveRequest) error {
 	logutils.JSONMessage("Leave response", request)
-	caliName := "cali" + request.EndpointID[:mathutils.MinInt(11, len(request.EndpointID))]
-	err := netns.RemoveVeth(caliName)
+	ifName := d.ifPrefix + request.EndpointID[:mathutils.MinInt(11, len(request.EndpointID))]
+	err := netns.RemoveVeth(ifName)
 	return err
 }
 

@@ -10,11 +10,13 @@ import (
 	. "github.com/projectcalico/libnetwork-plugin/utils/test"
 )
 
+var customIF string = "test"
+
 var _ = Describe("Running plugin with custom ENV", func() {
 	Describe("docker run", func() {
 		It("creates a container on a network with correct IFPREFIX", func() {
 			// Run the plugin with custom IFPREFIX
-			RunPlugin("-e CALICO_LIBNETWORK_IFPREFIX=test")
+			RunPlugin("-e CALICO_LIBNETWORK_IFPREFIX=" + customIF)
 
 			// Since running the plugin starts etcd, the pool needs to be created after.
 			CreatePool("192.169.0.0/16", false)
@@ -30,7 +32,7 @@ var _ = Describe("Running plugin with custom ENV", func() {
 			ip := docker_endpoint.IPAddress
 			mac := docker_endpoint.MacAddress
 			endpoint_id := docker_endpoint.EndpointID
-			interface_name := "cali" + endpoint_id[:mathutils.MinInt(11, len(endpoint_id))]
+			interface_name := customIF + endpoint_id[:mathutils.MinInt(11, len(endpoint_id))]
 
 			// Check that the endpoint is created in etcd
 			etcd_endpoint := GetEtcdString(fmt.Sprintf("/calico/v1/host/test/workload/libnetwork/libnetwork/endpoint/%s", endpoint_id))
@@ -57,7 +59,7 @@ var _ = Describe("Running plugin with custom ENV", func() {
 
 			// Make sure the container has the routes we expect
 			routes := DockerString(fmt.Sprintf("docker exec -i %s ip route", name))
-			Expect(routes).Should(Equal("default via 169.254.1.1 dev test0 \n169.254.1.1 dev test0"))
+			Expect(routes).Should(Equal(fmt.Sprintf("default via 169.254.1.1 dev %s0 \n169.254.1.1 dev %s0", customIF, customIF)))
 
 			// Delete container
 			DockerString(fmt.Sprintf("docker rm -f %s", name))
